@@ -1,9 +1,14 @@
 import os
+import json
+import io
 import requests
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, ImageMessage, FileMessage
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 app = Flask(__name__)
 
@@ -13,16 +18,13 @@ handler = WebhookHandler(os.environ['LINE_CHANNEL_SECRET'])
 GOOGLE_DRIVE_FOLDER_ID = os.environ['GOOGLE_DRIVE_FOLDER_ID']
 
 def upload_to_drive(filename, content, mimetype):
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaIoBaseUpload
-    import io
-    import json
-
     creds_json = json.loads(os.environ['GOOGLE_CREDENTIALS'])
-    creds = service_account.Credentials.from_service_account_info(
-        creds_json,
-        scopes=['https://www.googleapis.com/auth/drive']
+    creds = Credentials(
+        token=creds_json['token'],
+        refresh_token=creds_json['refresh_token'],
+        token_uri='https://oauth2.googleapis.com/token',
+        client_id=creds_json['client_id'],
+        client_secret=creds_json['client_secret']
     )
     service = build('drive', 'v3', credentials=creds)
     file_metadata = {
