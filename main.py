@@ -1,4 +1,6 @@
 import os
+import json
+import base64
 import requests
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
@@ -10,32 +12,15 @@ app = Flask(__name__)
 line_bot_api = LineBotApi(os.environ['LINE_CHANNEL_ACCESS_TOKEN'])
 handler = WebhookHandler(os.environ['LINE_CHANNEL_SECRET'])
 
-GOOGLE_DRIVE_FOLDER_ID = os.environ['GOOGLE_DRIVE_FOLDER_ID']
+GAS_URL = 'https://script.google.com/macros/s/AKfycbyge7LrGj8xwz3FMG5maMYxHKWQjA14E27hLVHfaCci2SMFGsO8rLN_TXPIZPFbFM4chA/exec'
 
 def upload_to_drive(filename, content, mimetype):
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaIoBaseUpload
-    import io
-    import json
-
-    creds_json = json.loads(os.environ['GOOGLE_CREDENTIALS'])
-    creds = service_account.Credentials.from_service_account_info(
-        creds_json,
-        scopes=['https://www.googleapis.com/auth/drive']
-    )
-    service = build('drive', 'v3', credentials=creds)
-    file_metadata = {
-        'name': filename,
-        'parents': [GOOGLE_DRIVE_FOLDER_ID],
-        'driveId': GOOGLE_DRIVE_FOLDER_ID,
+    payload = {
+        'fileName': filename,
+        'fileContent': base64.b64encode(content).decode('utf-8'),
+        'mimeType': mimetype
     }
-    media = MediaIoBaseUpload(io.BytesIO(content), mimetype=mimetype)
-    service.files().create(
-        body=file_metadata,
-        media_body=media,
-        supportsAllDrives=True
-    ).execute()
+    requests.post(GAS_URL, json=payload)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
