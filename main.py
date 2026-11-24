@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import requests
+from datetime import datetime, timezone, timedelta
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -36,7 +37,9 @@ def webhook():
 def handle_image(event):
     message_content = line_bot_api.get_message_content(event.message.id)
     content = b''.join(chunk for chunk in message_content.iter_content())
-    upload_to_drive('image.jpg', content, 'image/jpeg')
+    # 食事写真の自動カロリー集計で拾えるよう、撮影(受信)日時をファイル名に入れる
+    jst = datetime.now(timezone(timedelta(hours=9)))
+    upload_to_drive(f"meal_{jst.strftime('%Y%m%d_%H%M%S')}.jpg", content, 'image/jpeg')
 
 @handler.add(MessageEvent, message=FileMessage)
 def handle_file(event):
